@@ -1,65 +1,103 @@
 #include "PerkanTools.h"
 
+const int width = 800;
+const int height = 800;
+glm::vec4 lightColor = glm::vec4(0.8f, 0.8f, 1.0f, 1.0f);
+glm::vec3 lightWorldPos = glm::vec3(0.5f, 0.5f, 0.5f);
+glm::vec3 cameraWorldPos = glm::vec3(0.0f, 0.5f, 4.0f);
+
 int main()
 {	
-	GLfloat a = 1.0f;
-	GLfloat vertices[] =
-	{ //	POSITION				COLOR			UV
-		-a/2, -a/2, 0.0f,	1.0f, 0.0f, 0.0f,	0.0f, 0.0f,
-		-a/2, a/2, 0.0f,	0.0f, 1.0f, 0.0f,	0.0f, 1.0f,
-		a/2, -a/2, 0.0f,	0.0f, 0.0f, 1.0f,	1.0f, 0.0f,
-		a/2, a/2, 0.0f,		1.0f, 1.0f, 0.0f,	1.0f, 1.0f
+	//name,version,dimensions
+	GLFWwindow* window = initialize("PerkanGL", 4, 6, width, height);
+
+	gladLoadGL();
+	glViewport(0, 0, width, height);
+	glEnable(GL_DEPTH_TEST);
+	GLfloat background[] ={0.4f, 0.7f, 0.1f, 1.0f};
+	//Camera-width,height,position,fov,near,far plane
+	Camera cam(width, height, cameraWorldPos, 45.0f, 0.1f, 20.0f);
+
+
+	//MODELS
+	//----------------------------------------------------------------------------------------------
+	// POSITION, NORMAL, COLOR, UV
+	// FLOOR
+	GLfloat a = 5.0f;
+	std::vector<Vertex> floorVertices =
+	{
+		Vertex{glm::vec3(-a / 2, 0.0f, -a / 2), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f), glm::vec2(0.0f, 0.0f)},
+		Vertex{glm::vec3(-a / 2, 0.0f, a / 2), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f), glm::vec2(0.0f, 1.0f)},
+		Vertex{glm::vec3(a / 2, 0.0f, a / 2), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f), glm::vec2(1.0f, 1.0f)},
+		Vertex{glm::vec3(a / 2, 0.0f, -a / 2), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f), glm::vec2(1.0f, 0.0f)},
 	};
-	GLuint indices[] =
+	std::vector<GLuint> floorIndices =
 	{
 		0, 1, 2,
-		1, 3, 2
+		0, 2, 3
 	};
-									//name,version,dimensions
-	GLFWwindow* window = initialize((char *)"PerkanGL", 4, 6, 800, 800);
-
-	//Load glad so it configures OpenGL
-	gladLoadGL();
-
-	//Specify viewport of openGL in window
-	//x = [0,800] y = [0,800]
-	glViewport(0, 0, 800, 800);
-
-	Shader shaderProgram("default.vert", "default.frag");
-	shaderProgram.Activate();
-	VAO vao;
-	VBO vbo(vertices, sizeof(vertices));
-	EBO ebo(indices, sizeof(indices));
-
-	vao.Bind();
-	//Linking position
-	vao.LinkAttrib(vbo, 0, 3, GL_FLOAT, 8 * sizeof(GL_FLOAT), (void *)0);
-	//Linking color
-	vao.LinkAttrib(vbo, 1, 3, GL_FLOAT, 8 * sizeof(GL_FLOAT), (void*)(3 * sizeof(GL_FLOAT)));
-	//Linking uv data
-	vao.LinkAttrib(vbo, 2, 2, GL_FLOAT, 8 * sizeof(GL_FLOAT), (void*)(6 * sizeof(GL_FLOAT)));
-	vao.Unbind();
-	vbo.Unbind();
-	ebo.Unbind();
-
-	GLfloat background[] =
+	std::vector<Texture> floorTextures =
 	{
-		0.4f, 0.7f, 0.1f, 1.0f
+		Texture("floor.png", DIFFUSE, GL_NEAREST, GL_REPEAT),
+		Texture("floorSpecular.png", SPECULAR, GL_NEAREST, GL_REPEAT)
 	};
 
+	Mesh floor(floorVertices, floorIndices, floorTextures);
 
-	//Texture
-	Texture t1("gigachad.jpg", GL_TEXTURE_2D, GL_TEXTURE0, GL_LINEAR, GL_REPEAT);
+	Shader floorShader("floor1.vert", "floor.frag");
 
-	//Uniform values
-	GLuint timeID = glGetUniformLocation(shaderProgram.ID, "time");
-	GLuint tex0ID = glGetUniformLocation(shaderProgram.ID, "tex0");
-	glUniform1i(tex0ID, 0);
+	glm::vec3 floorWorldPos = glm::vec3(0.0f, -1.0f, 0.0f);
+	glm::mat4 floorModel = glm::mat4(1.0f);
+	floorModel = glm::translate(floorModel, floorWorldPos);
 
-	//This was in while loop
-	//shaderProgram.Activate();
-	vao.Bind();
-	ebo.Bind();
+	glUniformMatrix4fv(glGetUniformLocation(floorShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(floorModel));
+	glUniform4fv(glGetUniformLocation(floorShader.ID, "lightColor"), 1, glm::value_ptr(lightColor));
+	glUniform3fv(glGetUniformLocation(floorShader.ID, "lightWorldPos"), 1, glm::value_ptr(lightWorldPos));
+
+	//----------------------------------------------------------------------------------------------
+	//LIGHT
+	GLfloat lightLength = 0.3f;
+	glm::vec4 lightColor = glm::vec4(0.8f, 0.8f, 1.0f, 1.0f);
+	std::vector<Vertex> lightVertices = 
+	{			
+		Vertex{glm::vec3(-lightLength / 2, -lightLength / 2, -lightLength / 2), glm::vec3(0.0f), glm::vec3(0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(-lightLength / 2, lightLength / 2, -lightLength / 2), glm::vec3(0.0f), glm::vec3(0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(lightLength / 2, -lightLength / 2, -lightLength / 2), glm::vec3(0.0f), glm::vec3(0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(lightLength / 2, lightLength / 2, -lightLength / 2), glm::vec3(0.0f), glm::vec3(0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(-lightLength / 2, -lightLength / 2, lightLength / 2), glm::vec3(0.0f), glm::vec3(0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(-lightLength / 2, lightLength / 2, lightLength / 2), glm::vec3(0.0f), glm::vec3(0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(lightLength / 2, -lightLength / 2, lightLength / 2), glm::vec3(0.0f), glm::vec3(0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(lightLength / 2, lightLength / 2, lightLength / 2), glm::vec3(0.0f), glm::vec3(0.0f), glm::vec2(0.0f)},
+	};
+	std::vector<GLuint> lightIndices =
+	{
+		0, 1, 2,
+		1, 3, 2,
+
+		0, 1, 4,
+		1, 5, 4,
+
+		2, 3, 6,
+		3, 7, 6,
+
+		4, 5, 6,
+		5, 7, 6,
+
+		1, 3, 5,
+		3, 7, 5,
+
+		0, 2, 4,
+		2, 6, 4
+	};
+	std::vector<Texture> lightTextures;
+
+	Mesh light(lightVertices, lightIndices, lightTextures);
+	Shader lightShader("light.vert", "light.frag");
+
+	glm::mat4 lightModel = glm::mat4(1.0f);
+	lightModel = glm::translate(lightModel, lightWorldPos);
+	glUniformMatrix4fv(glGetUniformLocation(lightShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(lightModel));
+	glUniform4fv(glGetUniformLocation(lightShader.ID, "lightColor"), 1, glm::value_ptr(lightColor));
 
 	//Main while loop
 	while (!glfwWindowShouldClose(window))
@@ -67,27 +105,33 @@ int main()
 		//Background color
 		background[0] = 0.4f + 0.2 * sin(glfwGetTime());
 		glClearColor(background[0],background[1],background[2],background[3]);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		//SHADER PROGRAM
-		glUniform1f(timeID, glfwGetTime());
+		//Camera
+		cam.Inputs(window);
+		cam.UpdatePosition();
+		
+		if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+		{
+			lightModel = glm::translate(lightModel, glm::vec3(0.0f, 0.01f, 0.0f));
+			lightWorldPos += glm::vec3(0.0f, 0.01f, 0.0f);
+		}
+		else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+		{
+			lightModel = glm::translate(lightModel, glm::vec3(0.0f, -0.01f, 0.0f));
+			lightWorldPos -= glm::vec3(0.0f, 0.01f, 0.0f);
+		}
+		lightShader.Activate();
+		glUniformMatrix4fv(glGetUniformLocation(lightShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(lightModel));
+		floorShader.Activate();
+		glUniform3fv(glGetUniformLocation(floorShader.ID, "lightWorldPos"), 1, glm::value_ptr(lightWorldPos));
 
-		//VAO; EBO
-		glDrawElements(GL_TRIANGLES, sizeof(indices)/sizeof(indices[0]), GL_UNSIGNED_INT, 0);
+		light.Draw(lightShader, cam);
+		floor.Draw(floorShader, cam);
 
-		//GLFW
-		//Take care of all glfw events
 		glfwSwapBuffers(window); 
 		glfwPollEvents();
 	}
-
-
-	vao.Delete();
-	vbo.Delete();
-	ebo.Delete();
-	shaderProgram.Delete();
-	t1.Delete();
-
 
 	//Close window, terminate process
 	glfwDestroyWindow(window);

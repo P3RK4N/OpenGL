@@ -1,6 +1,6 @@
 #include "PerkanTools.h"
 
-GLFWwindow* initialize(char name[], int major, int minor, int windowWidth, int windowHeight)
+GLFWwindow* initialize(const char* name, int major, int minor, int windowWidth, int windowHeight)
 {
 	
 	//Initalize glfw
@@ -15,7 +15,7 @@ GLFWwindow* initialize(char name[], int major, int minor, int windowWidth, int w
 	//Just in case
 	if (window == nullptr)
 	{
-		cout << "ERROR" << endl;
+		std::cout << "ERROR" << std::endl;
 		glfwTerminate();
 		return nullptr;
 	}

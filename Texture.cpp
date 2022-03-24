@@ -1,38 +1,49 @@
 #include "Texture.h"
 
-Texture::Texture(string name, GLenum type, GLenum socket, GLenum interpolation, GLenum wrap)
+Texture::Texture(std::string name, IMGTYPE imgType, GLenum interpolation, GLenum wrap)
 {
-	imgType = type;
+	Texture::imgType = imgType;
 	int width, height, numColCh;
 	unsigned char* bytes;
-	stbi_set_flip_vertically_on_load(true);
+	//stbi_set_flip_vertically_on_load(true);
 	bytes = stbi_load((char *)name.c_str(), &width, &height, &numColCh, 0);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glGenTextures(1, &textureID);
-	glActiveTexture(socket);
-	Bind();
+	Bind(0);
 
-	glTexParameteri(imgType, GL_TEXTURE_MIN_FILTER, interpolation);
-	glTexParameteri(imgType, GL_TEXTURE_MAG_FILTER, interpolation);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, interpolation);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, interpolation);
 
-	glTexParameteri(imgType, GL_TEXTURE_WRAP_S, wrap);
-	glTexParameteri(imgType, GL_TEXTURE_WRAP_T, wrap);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
 
-	glTexImage2D(imgType, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, bytes);
-	glGenerateMipmap(imgType);
+	if (numColCh == 4) glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, bytes);
+	else if (numColCh == 3) glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, bytes);
+	else if (numColCh == 1) glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, bytes);
+	else throw std::invalid_argument("Invalid texture");
+
+	glGenerateMipmap(GL_TEXTURE_2D);
 
 	stbi_image_free(bytes);
 	Unbind();
-	Bind();
+	Bind(0);
 }
 
-void Texture::Bind()
+void Texture::Bind(GLuint unit)
 {
-	glBindTexture(imgType, textureID);
+	glActiveTexture(GL_TEXTURE0 + unit);
+	glBindTexture(GL_TEXTURE_2D, textureID);
+}
+
+void Texture::Activate(GLuint unit, Shader& shader, const char* uniform)
+{
+	Texture::Bind(unit);
+	glUniform1i(glGetUniformLocation(shader.ID, uniform), unit);
 }
 
 void Texture::Unbind()
 {
-	glBindTexture(imgType, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void Texture::Delete()

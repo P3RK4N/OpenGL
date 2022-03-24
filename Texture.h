@@ -1,20 +1,31 @@
 #ifndef TEXTURE_CLASS_H
 #define TEXTURE_CLASS_H
 
-#include<stb/stb_image.h>
-#include<glad/glad.h>
 #include<string>
 
-using namespace std;
+#include<stb/stb_image.h>
+#include<glad/glad.h>
+
+#include "shaderClass.h"
+
+enum IMGTYPE
+{
+	DIFFUSE, SPECULAR
+};
+static const char* IMGTYPE_STR[] =
+{
+	"diffuse", "specular"
+};
 
 class Texture
 {
-	private:
-		GLuint textureID;
-		GLenum imgType;
 	public:
-		Texture(string name, GLenum type, GLenum socket, GLenum interpolation, GLenum wrap);
-		void Bind();
+		GLuint textureID;
+		IMGTYPE imgType;
+
+		Texture(std::string name, IMGTYPE imgType, GLenum interpolation, GLenum wrap);
+		void Bind(GLuint unit);
+		void Activate(GLuint unit, Shader& shader, const char* uniform);
 		void Unbind();
 		void Delete();
 };
