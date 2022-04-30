@@ -19,6 +19,9 @@
     <Filter Include="Resource Files\Textures">
       <UniqueIdentifier>{7c25683a-0c7c-44ad-b494-88e8b0da44db}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\Models">
+      <UniqueIdentifier>{623dbf9c-0d70-4798-b0a3-c3d73b0fcf37}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="glad.c">
@@ -59,12 +62,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="default.vert">
-      <Filter>Resource Files\Shaders</Filter>
-    </None>
-    <None Include="default.frag">
-      <Filter>Resource Files\Shaders</Filter>
-    </None>
     <None Include="sigmium.vert">
       <Filter>Resource Files\Shaders</Filter>
     </None>
@@ -90,6 +87,15 @@
       <Filter>Resource Files\Shaders</Filter>
     </None>
     <None Include="floor1.vert">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="sword.vert">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="default.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="default.vert">
       <Filter>Resource Files\Shaders</Filter>
     </None>
   </ItemGroup>

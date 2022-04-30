@@ -2,7 +2,7 @@
 
 const int width = 800;
 const int height = 800;
-glm::vec4 lightColor = glm::vec4(0.8f, 0.8f, 1.0f, 1.0f);
+glm::vec3 lightColor = glm::vec3(0.8f, 0.8f, 1.0f);
 glm::vec3 lightWorldPos = glm::vec3(0.5f, 0.5f, 0.5f);
 glm::vec3 cameraWorldPos = glm::vec3(0.0f, 0.5f, 4.0f);
 
@@ -14,16 +14,16 @@ int main()
 	gladLoadGL();
 	glViewport(0, 0, width, height);
 	glEnable(GL_DEPTH_TEST);
-	GLfloat background[] ={0.4f, 0.7f, 0.1f, 1.0f};
+	GLfloat background[] ={1.0f, 1.0f, 1.0f, 1.0f};
 	//Camera-width,height,position,fov,near,far plane
-	Camera cam(width, height, cameraWorldPos, 45.0f, 0.1f, 20.0f);
+	Camera cam(width, height, cameraWorldPos, 45.0f, 0.01f, 100.0f);
 
 
 	//MODELS
 	//----------------------------------------------------------------------------------------------
 	// POSITION, NORMAL, COLOR, UV
 	// FLOOR
-	GLfloat a = 5.0f;
+	/*GLfloat a = 5.0f;
 	std::vector<Vertex> floorVertices =
 	{
 		Vertex{glm::vec3(-a / 2, 0.0f, -a / 2), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f), glm::vec2(0.0f, 0.0f)},
@@ -52,12 +52,12 @@ int main()
 
 	glUniformMatrix4fv(glGetUniformLocation(floorShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(floorModel));
 	glUniform4fv(glGetUniformLocation(floorShader.ID, "lightColor"), 1, glm::value_ptr(lightColor));
-	glUniform3fv(glGetUniformLocation(floorShader.ID, "lightWorldPos"), 1, glm::value_ptr(lightWorldPos));
+	glUniform3fv(glGetUniformLocation(floorShader.ID, "lightWorldPos"), 1, glm::value_ptr(lightWorldPos));*/
 
 	//----------------------------------------------------------------------------------------------
 	//LIGHT
 	GLfloat lightLength = 0.3f;
-	glm::vec4 lightColor = glm::vec4(0.8f, 0.8f, 1.0f, 1.0f);
+	glm::vec3 lightColor = glm::vec3(0.8f, 0.8f, 1.0f);
 	std::vector<Vertex> lightVertices = 
 	{			
 		Vertex{glm::vec3(-lightLength / 2, -lightLength / 2, -lightLength / 2), glm::vec3(0.0f), glm::vec3(0.0f), glm::vec2(0.0f)},
@@ -98,12 +98,15 @@ int main()
 	lightModel = glm::translate(lightModel, lightWorldPos);
 	glUniformMatrix4fv(glGetUniformLocation(lightShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(lightModel));
 	glUniform4fv(glGetUniformLocation(lightShader.ID, "lightColor"), 1, glm::value_ptr(lightColor));
+	//-----------------------------------------------------------------------------------------------
+	// SWORD
+	Model sword("Models/grindstone/scene.gltf");
+	Shader swordShader("default.vert", "default.frag");
 
 	//Main while loop
 	while (!glfwWindowShouldClose(window))
 	{
 		//Background color
-		background[0] = 0.4f + 0.2 * sin(glfwGetTime());
 		glClearColor(background[0],background[1],background[2],background[3]);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -111,24 +114,10 @@ int main()
 		cam.Inputs(window);
 		cam.UpdatePosition();
 		
-		if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-		{
-			lightModel = glm::translate(lightModel, glm::vec3(0.0f, 0.01f, 0.0f));
-			lightWorldPos += glm::vec3(0.0f, 0.01f, 0.0f);
-		}
-		else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-		{
-			lightModel = glm::translate(lightModel, glm::vec3(0.0f, -0.01f, 0.0f));
-			lightWorldPos -= glm::vec3(0.0f, 0.01f, 0.0f);
-		}
-		lightShader.Activate();
-		glUniformMatrix4fv(glGetUniformLocation(lightShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(lightModel));
-		floorShader.Activate();
-		glUniform3fv(glGetUniformLocation(floorShader.ID, "lightWorldPos"), 1, glm::value_ptr(lightWorldPos));
-
+		//TMP
 		light.Draw(lightShader, cam);
-		floor.Draw(floorShader, cam);
-
+		//floor.Draw(floorShader, cam);
+		sword.Draw(swordShader, cam);
 		glfwSwapBuffers(window); 
 		glfwPollEvents();
 	}

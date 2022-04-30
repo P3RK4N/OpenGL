@@ -171,6 +171,7 @@
     <None Include="obamium.vert" />
     <None Include="sigmium.frag" />
     <None Include="sigmium.vert" />
+    <None Include="sword.vert" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />

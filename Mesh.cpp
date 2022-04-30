@@ -1,7 +1,5 @@
 #include "Mesh.h"
 
-
-
 Mesh::Mesh(std::vector<Vertex>& vertices, std::vector<GLuint>& indices, std::vector<Texture>& textures)
 {
 	Mesh::vertices = vertices;
@@ -44,6 +42,7 @@ void Mesh::Draw
 	Mesh::vao.Bind();
 	Mesh::ebo.Bind();
 
+	//Bind textures to slots
 	short numDiffuse = 0;
 	short numSpecular = 0;
 	for (int i = 0; i < Mesh::textures.size(); i++)
@@ -61,17 +60,18 @@ void Mesh::Draw
 		}
 		textures[i].Activate(i, shader, (type + num).c_str());
 	}
+	
 	glUniform3fv(glGetUniformLocation(shader.ID, "cameraWorldPos"), 1, glm::value_ptr(camera.position));
 	camera.UpdateMatrix(shader, "camMatrix");
 
 	glm::mat4 trans = glm::translate(glm::mat4(1.0f), translation);
 	glm::mat4 rot = glm::mat4_cast(rotation);
-	glm::mat4 scal = glm::scale(glm::mat4(1.0f), scale);
+	glm::mat4 scal = glm::scale(glm::mat4(1.0f), scale * glm::vec3(0.1f));
 
 	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "translation"), 1, GL_FALSE, glm::value_ptr(trans));
 	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "rotation"), 1, GL_FALSE, glm::value_ptr(rot));
-	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "scale"), 1, GL_FALSE, glm::value_ptr(scale));
-	//glUniformMatrix4fv(glGetUniformLocation(shader.ID, "model"), 1, GL_FALSE, glm::value_ptr(matrix));
+	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "scale"), 1, GL_FALSE, glm::value_ptr(scal));
+	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "model"), 1, GL_FALSE, glm::value_ptr(matrix));
 
 	glDrawElements(GL_TRIANGLES, Mesh::indices.size(), GL_UNSIGNED_INT, 0);
 }

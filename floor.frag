@@ -3,6 +3,7 @@
 in vec2 texcoord;
 in vec3 worldPos;
 in vec3 normalcoord;
+in vec3 color;
 
 out vec4 frag;
 

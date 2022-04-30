@@ -4,10 +4,19 @@ Model::Model(const char* file)
 {
 	std::string text = get_file_contents(file);
 	Model::JSON = json::parse(text);
-	data = getData();
+	Model::file = file;
+
+	getData();
+	traverseNode(0, glm::mat4(1.0f));
 }
 
-std::vector<unsigned char>& Model::getData()
+void Model::Draw(Shader& shader, Camera& camera)
+{
+	for (unsigned int i = 0; i < meshes.size(); i++)
+		meshes[i].Mesh::Draw(shader, camera, matricesMeshes[i]);
+}
+
+void Model::getData()
 {
 	std::string bytesText;
 	std::string uri = Model::JSON["buffers"][0]["uri"];
@@ -15,13 +24,11 @@ std::vector<unsigned char>& Model::getData()
 	std::string fileDir = fileStr.substr(0, fileStr.find_last_of('/') + 1);
 	bytesText = get_file_contents((fileDir + uri).c_str());
 	std::vector<unsigned char> data(bytesText.begin(), bytesText.end());
-	return data;
+	Model::data = data;
 }
 
-std::vector<float>& Model::getFloats(json accessor)
+void Model::getFloats(json accessor, std::vector<float>& floatVec)
 {
-	std::vector<float> floatVec;
-
 	unsigned int buffViewInd = accessor.value("bufferView", 1);
 	unsigned int count = accessor["count"];
 	unsigned int accByteOffset = accessor.value("byteOffset", 0);
@@ -47,14 +54,10 @@ std::vector<float>& Model::getFloats(json accessor)
 		std::memcpy(&value, bytes, sizeof(float));
 		floatVec.push_back(value);
 	}
-
-	return floatVec;
 }
 
-std::vector<GLuint>& Model::getIndices(json accessor)
+void Model::getIndices(json accessor, std::vector<GLuint>& indices)
 {
-	std::vector<GLuint> indices;
-
 	unsigned int buffViewInd = accessor.value("bufferView", 1);
 	unsigned int count = accessor["count"];
 	unsigned int accByteOffset = accessor.value("byteOffset", 0);
@@ -62,7 +65,7 @@ std::vector<GLuint>& Model::getIndices(json accessor)
 
 	json bufferView = Model::JSON["bufferViews"][buffViewInd];
 	unsigned int byteOffset = bufferView["byteOffset"];
-	
+
 	unsigned int beginData = byteOffset + accByteOffset;
 	unsigned int lengthData = count * 4;
 
@@ -96,27 +99,23 @@ std::vector<GLuint>& Model::getIndices(json accessor)
 			indices.push_back((GLuint)value);
 		}
 	}
-
-	return indices;
 }
 
-std::vector<Texture>& Model::getTextures()
+void Model::getTextures(std::vector<Texture>& textures)
 {
-	std::vector<Texture> textures;
-
 	std::string fileStr = std::string(file);
 	std::string fileDir = fileStr.substr(0, fileStr.find_last_of('/') + 1);
 
 	for (unsigned int i = 0; i < JSON["images"].size(); i++)
 	{
 		std::string texPath = JSON["images"][i]["uri"];
+		std::cout << texPath << '\n';
 
 		if (Model::loadedTexName.find(texPath) != Model::loadedTexName.end())
 		{
 			textures.push_back(Model::loadedTextures[Model::loadedTexName[texPath]]);
 			continue;
 		}
-
 		if (texPath.find("baseColor") != std::string::npos)
 		{
 			Texture diffuse((fileDir + texPath).c_str(), DIFFUSE, GL_NEAREST, GL_REPEAT);
@@ -132,18 +131,15 @@ std::vector<Texture>& Model::getTextures()
 			Model::loadedTexName[texPath] = Model::loadedTextures.size() - 1;
 		}
 	}
-
-	return textures;
 }
 
-std::vector<Vertex>& Model::assembleVertices(std::vector<glm::vec3> position, std::vector<glm::vec3> normal, std::vector<glm::vec2> uv)
+//3pos, 3norm, 3col(0 default), 2uv
+void Model::assembleVertices(std::vector<Vertex>&  vertices, std::vector<glm::vec3> position, std::vector<glm::vec3> normal, std::vector<glm::vec2> uv)
 {
-	std::vector<Vertex> vertices;
 	for (int i = 0; i < position.size(); i++)
 	{
-		vertices.push_back(Vertex{ position[i], normal[i], glm::vec3(0.0f), uv[i]});
+		vertices.push_back(Vertex{ position[i], normal[i], glm::vec3(0.0f), uv[i] });
 	}
-	return vertices;
 }
 
 void Model::loadMesh(unsigned int indMesh)
@@ -153,53 +149,136 @@ void Model::loadMesh(unsigned int indMesh)
 	unsigned int uvAccInd = JSON["meshes"][indMesh]["primitives"][0]["attributes"]["TEXCOORD_0"];
 	unsigned int indAccInd = JSON["meshes"][indMesh]["primitives"][0]["indices"];
 
-	std::vector<float> posVec = Model::getFloats(JSON["accessors"][posAccInd]);
-	std::vector<glm::vec3> positions = Model::groupFloatsVec3(posVec);
+	std::vector<float> posVec;
+	std::vector<glm::vec3> positions;
+	Model::getFloats(JSON["accessors"][posAccInd], posVec);
+	Model::groupFloatsVec3(posVec, positions);
 
-	std::vector<float> normalVec = Model::getFloats(JSON["accessors"][normalAccInd]);
-	std::vector<glm::vec3> normals = Model::groupFloatsVec3(normalVec);
+	std::vector<float> normalVec;
+	std::vector<glm::vec3> normals;
+	Model::getFloats(JSON["accessors"][normalAccInd], normalVec);
+	Model::groupFloatsVec3(normalVec, normals);
 
-	std::vector<float> uvVec = Model::getFloats(JSON["accessors"][uvAccInd]);
-	std::vector<glm::vec2> UVs = Model::groupFloatsVec2(uvVec);
+	std::vector<float> uvVec;
+	std::vector<glm::vec2> UVs;
+	Model::getFloats(JSON["accessors"][uvAccInd], uvVec);
+	Model::groupFloatsVec2(uvVec, UVs);
 
-	std::vector<Vertex> vertices = Model::assembleVertices(positions, normals, UVs);
-	std::vector<GLuint> indices = Model::getIndices(JSON["accessors"][indAccInd]);
-	std::vector<Texture> textures = Model::getTextures();
+	std::vector<Vertex> vertices;
+	Model::assembleVertices(vertices, positions, normals, UVs);
+	std::vector<GLuint> indices;
+	Model::getIndices(JSON["accessors"][indAccInd], indices);
+	std::vector<Texture> textures;
+	Model::getTextures(textures);
 
-	meshes.push_back(Mesh(vertices, indices, textures));
+	std::cout << textures.size();
+	Model::meshes.push_back(Mesh(vertices, indices, textures));
 }
 
-//void Model::traverseNode(unsigned int nextNode, glm::mat4 matrix = glm::mat4(1.0f))
-//{
-//
-//}
-
-std::vector<glm::vec2>& Model::groupFloatsVec2(std::vector<float> &floatVec)
+void Model::traverseNode(unsigned int nextnode, glm::mat4 matrix)
 {
-	std::vector<glm::vec2> vectors;
-	for (int i = 0; i < floatVec.size();)
+	json node = JSON["nodes"][nextnode];
+
+	glm::vec3 translation = glm::vec3(0.0f, 0.0f, 0.0f);
+	if (node.find("translation") != node.end())
 	{
-		vectors.push_back(glm::vec2(floatVec[i++], floatVec[i++]));
+		float transValues[3];
+		for (unsigned int i = 0; i < node["translation"].size(); i++)
+			transValues[i] = node["translation"][i];
+		translation = glm::make_vec3(transValues);
 	}
-	return vectors;
+	glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+	if (node.find("rotation") != node.end())
+	{
+		float rotValues[4] =
+		{
+			//W value
+			node["rotation"][3],
+			//Y or X value
+			node["rotation"][2],
+			//X or Y value
+			node["rotation"][1],
+			//Z value
+			node["rotation"][0]
+		};
+		rotation = glm::make_quat(rotValues);
+	}
+	glm::vec3 scale = glm::vec3(1.0f, 1.0f, 1.0f);
+	if (node.find("scale") != node.end())
+	{
+		float scaleValues[3];
+		for (unsigned int i = 0; i < node["scale"].size(); i++)
+			scaleValues[i] = node["scale"][i];
+		scale = glm::make_vec3(scaleValues);
+	}
+	glm::mat4 matNode = glm::mat4(1.0f);
+	if (node.find("matrix") != node.end())
+	{
+		float matValues[16];
+		for (unsigned int i = 0; i < node["matrix"].size(); i++)
+			matValues[i] = node["matrix"][i];
+		matNode = glm::make_mat4(matValues);
+	}
+
+	glm::mat4 trans = glm::mat4(1.0f);
+	glm::mat4 rot = glm::mat4(1.0f);
+	glm::mat4 sca = glm::mat4(1.0f);
+
+	trans = glm::translate(trans, translation);
+	rot = glm::mat4_cast(rotation);
+	sca = glm::scale(sca, scale);
+
+	glm::mat4 matNextNode = matrix * matNode * trans * rot * sca;
+
+	if (node.find("mesh") != node.end())
+	{
+		translationsMeshes.push_back(translation);
+		rotationsMeshes.push_back(rotation);
+		scalesMeshes.push_back(scale);
+		matricesMeshes.push_back(matNextNode);
+
+		loadMesh(node["mesh"]);
+	}
+
+	if (node.find("children") != node.end())
+	{
+		for (unsigned int i = 0; i < node["children"].size(); i++)
+			traverseNode(node["children"][i], matNextNode);
+	}
 }
 
-std::vector<glm::vec3>& Model::groupFloatsVec3(std::vector<float> &floatVec)
+void Model::groupFloatsVec2(std::vector<float>& floatVec, std::vector<glm::vec2>& vectors)
 {
-	std::vector<glm::vec3> vectors;
 	for (int i = 0; i < floatVec.size();)
 	{
-		vectors.push_back(glm::vec3(floatVec[i++], floatVec[i++], floatVec[i++]));
+		glm::vec2 vector2;
+		vector2.x = floatVec[i++];
+		vector2.y = floatVec[i++];
+		vectors.push_back(vector2);
 	}
-	return vectors;
 }
 
-std::vector<glm::vec4>& Model::groupFloatsVec4(std::vector<float> &floatVec)
+void Model::groupFloatsVec3(std::vector<float>& floatVec, std::vector<glm::vec3>& vectors)
 {
-	std::vector<glm::vec4> vectors;
 	for (int i = 0; i < floatVec.size();)
 	{
-		vectors.push_back(glm::vec4(floatVec[i++], floatVec[i++], floatVec[i++], floatVec[i++]));
+		glm::vec3 vector3;
+		vector3.x = floatVec[i++];
+		vector3.y = floatVec[i++];
+		vector3.z = floatVec[i++];
+		vectors.push_back(vector3);
 	}
-	return vectors;
+}
+
+void Model::groupFloatsVec4(std::vector<float>& floatVec, std::vector<glm::vec4>& vectors)
+{
+	for (int i = 0; i < floatVec.size();)
+	{
+		glm::vec4 vector4;
+		vector4.x = floatVec[i++];
+		vector4.y = floatVec[i++];
+		vector4.z = floatVec[i++];
+		vector4.w = floatVec[i++];
+		vectors.push_back(vector4);
+	}
 }
