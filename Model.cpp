@@ -109,7 +109,6 @@ void Model::getTextures(std::vector<Texture>& textures)
 	for (unsigned int i = 0; i < JSON["images"].size(); i++)
 	{
 		std::string texPath = JSON["images"][i]["uri"];
-		std::cout << texPath << '\n';
 
 		if (Model::loadedTexName.find(texPath) != Model::loadedTexName.end())
 		{
@@ -171,7 +170,6 @@ void Model::loadMesh(unsigned int indMesh)
 	std::vector<Texture> textures;
 	Model::getTextures(textures);
 
-	std::cout << textures.size();
 	Model::meshes.push_back(Mesh(vertices, indices, textures));
 }
 

@@ -102,7 +102,8 @@ int main()
 	// SWORD
 	Model sword("Models/grindstone/scene.gltf");
 	Shader swordShader("default.vert", "default.frag");
-
+	glUniform4fv(glGetUniformLocation(swordShader.ID, "lightColor"), 1, glm::value_ptr(lightColor));
+	glUniform4fv(glGetUniformLocation(swordShader.ID, "lightWorldPos"), 1, glm::value_ptr(lightWorldPos));
 	//Main while loop
 	while (!glfwWindowShouldClose(window))
 	{
